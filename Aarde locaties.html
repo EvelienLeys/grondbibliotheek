@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alle Locaties — De Wereld van Pastoor Johnny</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:       #0d1b2a;
+      --sepia:     #2c4a6e;
+      --paper:     #e8f0f7;
+      --parchment: #d4e4f0;
+      --cream:     #f0f6fb;
+      --rule:      #7aaac8;
+      --gold:      #3a7bbf;
+    }
+
+    body {
+      background: var(--cream);
+      color: var(--ink);
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 17px;
+      line-height: 1.7;
+    }
+
+    header {
+      background: var(--ink);
+      color: var(--paper);
+      text-align: center;
+      padding: 36px 24px 28px;
+      border-bottom: 4px solid var(--gold);
+    }
+
+    .header-kicker {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 11px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--rule);
+      margin-bottom: 10px;
+    }
+
+    header h1 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(1.6rem, 5vw, 2.8rem);
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      line-height: 1.2;
+      color: var(--paper);
+      margin-bottom: 8px;
+    }
+
+    header p {
+      font-family: 'EB Garamond', Georgia, serif;
+      font-style: italic;
+      font-size: 1rem;
+      color: var(--rule);
+    }
+
+    .back-link {
+      display: block;
+      text-align: center;
+      padding: 14px;
+      background: var(--parchment);
+      border-bottom: 1px solid var(--rule);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--sepia);
+      text-decoration: none;
+    }
+    .back-link:hover { background: var(--ink); color: var(--paper); }
+
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 24px 64px;
+    }
+
+    .continent-block {
+      margin-bottom: 52px;
+    }
+
+    .continent-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--gold);
+    }
+
+    .continent-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px var(--rule);
+    }
+
+    .continent-header h2 {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: 0.03em;
+      flex: 1;
+    }
+
+    .continent-count {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .location-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0;
+      border-top: 1px solid var(--rule);
+      border-left: 1px solid var(--rule);
+    }
+
+    .location-item {
+      padding: 9px 14px;
+      border-right: 1px solid var(--rule);
+      border-bottom: 1px solid var(--rule);
+      font-family: 'EB Garamond', Georgia, serif;
+      font-size: 0.95rem;
+      color: var(--sepia);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+
+    .location-item:hover {
+      background: var(--parchment);
+      color: var(--ink);
+    }
+
+    .location-item::before {
+      content: '·';
+      color: var(--gold);
+      font-size: 1.2rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    footer {
+      background: var(--ink);
+      color: var(--rule);
+      text-align: center;
+      padding: 24px;
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+    }
+
+    @media (max-width: 480px) {
+      .location-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-kicker">Een pelgrimage in aarde</div>
+  <h1>Alle Locaties</h1>
+  <p>155 plekken op 6 continenten — de volledige collectie van Pastoor Johnny</p>
+</header>
+
+<a class="back-link" href="pastoor-johnny.html">← Terug naar de kaart</a>
+
+<main id="locaties"></main>
+
+<footer>
+  Een project van Pastoor Johnny &nbsp;·&nbsp; Het Nieuwsblad, 16 oktober 2021
+</footer>
+
+<script>
+  const continentColors = {
+    "Afrika":     "#1565c0",
+    "Azië & M-O": "#0288d1",
+    "Europa":     "#0097a7",
+    "Amerika":    "#1976d2",
+  };
+
+  const locations = [
+    { name: "Benin", continent: "Afrika" },
+    { name: "Ouagadougou, Burkina Faso", continent: "Afrika" },
+    { name: "Gran Canaria, Spanje", continent: "Afrika" },
+    { name: "Katako-Kindu, Congo", continent: "Afrika" },
+    { name: "Wamba, Congo", continent: "Afrika" },
+    { name: "Zuid-Kivu, Congo", continent: "Afrika" },
+    { name: "Congo", continent: "Afrika" },
+    { name: "Egypte", continent: "Afrika" },
+    { name: "Praia, Kaapverdië", continent: "Afrika" },
+    { name: "Nador, Marokko", continent: "Afrika" },
+    { name: "Marrakesh, Marokko", continent: "Afrika" },
+    { name: "Ouarzazate, Marokko", continent: "Afrika" },
+    { name: "Driouch, Marokko", continent: "Afrika" },
+    { name: "Oeganda", continent: "Afrika" },
+    { name: "Kigali, Rwanda", continent: "Afrika" },
+    { name: "Seychellen", continent: "Afrika" },
+    { name: "Togo", continent: "Afrika" },
+    { name: "Witsand, Zuid-Afrika", continent: "Afrika" },
+    { name: "Willowmore, Zuid-Afrika", continent: "Afrika" },
+    { name: "Myanmar", continent: "Azië & M-O" },
+    { name: "Nanning, China", continent: "Azië & M-O" },
+    { name: "Troodos, Cyprus", continent: "Azië & M-O" },
+    { name: "Delhi, India", continent: "Azië & M-O" },
+    { name: "Madhya Pradesh, India", continent: "Azië & M-O" },
+    { name: "Prayagraj, India", continent: "Azië & M-O" },
+    { name: "Teheran, Iran", continent: "Azië & M-O" },
+    { name: "Jeruzalem, Israël", continent: "Azië & M-O" },
+    { name: "Dode Zee, Jordanië", continent: "Azië & M-O" },
+    { name: "Libanon", continent: "Azië & M-O" },
+    { name: "Nepal", continent: "Azië & M-O" },
+    { name: "Palestina", continent: "Azië & M-O" },
+    { name: "Colombo, Sri Lanka", continent: "Azië & M-O" },
+    { name: "Thailand", continent: "Azië & M-O" },
+    { name: "Vietnam", continent: "Azië & M-O" },
+    { name: "Istanbul, Turkije", continent: "Azië & M-O" },
+    { name: "Bozjom, Georgië", continent: "Azië & M-O" },
+    { name: "Oostende, België", continent: "Europa" },
+    { name: "Postel, België", continent: "Europa" },
+    { name: "Kopenhagen, Denemarken", continent: "Europa" },
+    { name: "Ribe, Denemarken", continent: "Europa" },
+    { name: "Lindet Skov, Denemarken", continent: "Europa" },
+    { name: "Keulen, Duitsland", continent: "Europa" },
+    { name: "Freiburg, Duitsland", continent: "Europa" },
+    { name: "Colchester, Engeland", continent: "Europa" },
+    { name: "Londen, Engeland", continent: "Europa" },
+    { name: "Derwent Water, Engeland", continent: "Europa" },
+    { name: "Kallislaki, Finland", continent: "Europa" },
+    { name: "Roquetaillade, Frankrijk", continent: "Europa" },
+    { name: "Corsica, Frankrijk", continent: "Europa" },
+    { name: "Colmar, Frankrijk", continent: "Europa" },
+    { name: "Dijon, Frankrijk", continent: "Europa" },
+    { name: "Fontenay, Frankrijk", continent: "Europa" },
+    { name: "Grenoble, Frankrijk", continent: "Europa" },
+    { name: "Lyon, Frankrijk", continent: "Europa" },
+    { name: "Nice, Frankrijk", continent: "Europa" },
+    { name: "Puy de Dôme, Frankrijk", continent: "Europa" },
+    { name: "Mulhouse, Frankrijk", continent: "Europa" },
+    { name: "Thessaloniki, Griekenland", continent: "Europa" },
+    { name: "Vergina, Griekenland", continent: "Europa" },
+    { name: "Keszthely, Hongarije", continent: "Europa" },
+    { name: "Dublin, Ierland", continent: "Europa" },
+    { name: "Rosslare, Ierland", continent: "Europa" },
+    { name: "Diamond Beach, IJsland", continent: "Europa" },
+    { name: "Dolomieten, Italië", continent: "Europa" },
+    { name: "Etna, Italië", continent: "Europa" },
+    { name: "San Remo, Italië", continent: "Europa" },
+    { name: "Rome, Italië", continent: "Europa" },
+    { name: "Stelvio, Italië", continent: "Europa" },
+    { name: "Trapani, Italië", continent: "Europa" },
+    { name: "Venetië, Italië", continent: "Europa" },
+    { name: "Vesuvius, Italië", continent: "Europa" },
+    { name: "Zuid-Tirol, Italië", continent: "Europa" },
+    { name: "Gardameer, Italië", continent: "Europa" },
+    { name: "Assisi, Italië", continent: "Europa" },
+    { name: "Dubrovnik, Kroatië", continent: "Europa" },
+    { name: "Varaždin, Kroatië", continent: "Europa" },
+    { name: "Dalmatia, Kroatië", continent: "Europa" },
+    { name: "Poreč, Kroatië", continent: "Europa" },
+    { name: "Malta", continent: "Europa" },
+    { name: "Monaco", continent: "Europa" },
+    { name: "Rotterdam, Nederland", continent: "Europa" },
+    { name: "Gardnos, Noorwegen", continent: "Europa" },
+    { name: "Ifnefoss, Noorwegen", continent: "Europa" },
+    { name: "Lillehammer, Noorwegen", continent: "Europa" },
+    { name: "Norefjell, Noorwegen", continent: "Europa" },
+    { name: "Oslo, Noorwegen", continent: "Europa" },
+    { name: "Steindalfoss, Noorwegen", continent: "Europa" },
+    { name: "Wenen, Oostenrijk", continent: "Europa" },
+    { name: "Krakau, Polen", continent: "Europa" },
+    { name: "Zgorzelec, Polen", continent: "Europa" },
+    { name: "Madeira, Portugal", continent: "Europa" },
+    { name: "Santiago do Cacém, Portugal", continent: "Europa" },
+    { name: "Braga, Portugal", continent: "Europa" },
+    { name: "Ponte de Lima, Portugal", continent: "Europa" },
+    { name: "Boekarest, Roemenië", continent: "Europa" },
+    { name: "Sint-Petersburg, Rusland", continent: "Europa" },
+    { name: "Ben Nevis, Schotland", continent: "Europa" },
+    { name: "Isle of Skye, Schotland", continent: "Europa" },
+    { name: "Loch Ness, Schotland", continent: "Europa" },
+    { name: "Lockerbie, Schotland", continent: "Europa" },
+    { name: "Port Achan, Schotland", continent: "Europa" },
+    { name: "Tighnabruaich, Schotland", continent: "Europa" },
+    { name: "Barcelona, Spanje", continent: "Europa" },
+    { name: "Gerona, Spanje", continent: "Europa" },
+    { name: "Granada, Spanje", continent: "Europa" },
+    { name: "Valga, Spanje", continent: "Europa" },
+    { name: "Zaragoza, Spanje", continent: "Europa" },
+    { name: "La Rioja, Spanje", continent: "Europa" },
+    { name: "Praag, Tsjechië", continent: "Europa" },
+    { name: "Karlsbad, Tsjechië", continent: "Europa" },
+    { name: "Brechfa, Wales", continent: "Europa" },
+    { name: "Brecon Beacons, Wales", continent: "Europa" },
+    { name: "Veberöd, Zweden", continent: "Europa" },
+    { name: "Bayou la Batre, Alabama", continent: "Amerika" },
+    { name: "Robertsdale, Alabama", continent: "Amerika" },
+    { name: "Lockesburg, Arkansas", continent: "Amerika" },
+    { name: "Texarkana, Arkansas", continent: "Amerika" },
+    { name: "Montréal, Canada", continent: "Amerika" },
+    { name: "Niagara Falls, Canada", continent: "Amerika" },
+    { name: "Cayman Eilanden", continent: "Amerika" },
+    { name: "Cuba", continent: "Amerika" },
+    { name: "Curaçao", continent: "Amerika" },
+    { name: "Klein Curaçao", continent: "Amerika" },
+    { name: "Dominicaanse Republiek", continent: "Amerika" },
+    { name: "Lee, Florida", continent: "Amerika" },
+    { name: "Alto, Georgia", continent: "Amerika" },
+    { name: "Montego Bay, Jamaica", continent: "Amerika" },
+    { name: "Ferryday, Louisiana", continent: "Amerika" },
+    { name: "Gilliam, Louisiana", continent: "Amerika" },
+    { name: "Biloxi, Mississippi", continent: "Amerika" },
+    { name: "Natchez, Mississippi", continent: "Amerika" },
+    { name: "Akumal, Mexico", continent: "Amerika" },
+    { name: "Albuquerque, New Mexico", continent: "Amerika" },
+    { name: "Santa Fe, New Mexico", continent: "Amerika" },
+    { name: "New York City", continent: "Amerika" },
+    { name: "Smoky Mountains, North Carolina", continent: "Amerika" },
+    { name: "Waynesville, North Carolina", continent: "Amerika" },
+    { name: "Elk City, Oklahoma", continent: "Amerika" },
+    { name: "Oklahoma City, Oklahoma", continent: "Amerika" },
+    { name: "Panama City", continent: "Amerika" },
+    { name: "Charleston, South Carolina", continent: "Amerika" },
+    { name: "Holly Hill, South Carolina", continent: "Amerika" },
+    { name: "Gatlinburg, Tennessee", continent: "Amerika" },
+    { name: "Kellerville, Texas", continent: "Amerika" },
+    { name: "Wildorado, Texas", continent: "Amerika" },
+    { name: "Brazilië", continent: "Amerika" },
+    { name: "Cusco, Peru", continent: "Amerika" },
+    { name: "Arequipa, Peru", continent: "Amerika" },
+  ];
+
+  // Group by continent
+  const grouped = {};
+  for (const loc of locations) {
+    if (!grouped[loc.continent]) grouped[loc.continent] = [];
+    grouped[loc.continent].push(loc.name);
+  }
+
+  const main = document.getElementById('locaties');
+
+  for (const [continent, locs] of Object.entries(grouped)) {
+    const color = continentColors[continent] || '#1565c0';
+    const block = document.createElement('div');
+    block.className = 'continent-block';
+
+    block.innerHTML = `
+      <div class="continent-header">
+        <span class="continent-dot" style="background:${color}"></span>
+        <h2>${continent}</h2>
+        <span class="continent-count">${locs.length} locaties</span>
+      </div>
+      <div class="location-grid">
+        ${locs.map(n => `<div class="location-item">${n}</div>`).join('')}
+      </div>
+    `;
+    main.appendChild(block);
+  }
+</script>
+</body>
+</html>
