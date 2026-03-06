@@ -1,1 +1,608 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wereldkaart – Reisherinneringen</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Crimson+Pro:wght@300;400&display=swap');
 
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --ink: #1a1208;
+    --parchment: #f5eed8;
+    --gold: #c8943a;
+    --rust: #8b3a1a;
+    --moss: #3d5c2a;
+    --sea: #2a4a6b;
+    --cream: #faf6e8;
+  }
+
+  body {
+    background: var(--parchment);
+    font-family: 'Crimson Pro', serif;
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  header {
+    text-align: center;
+    padding: 2rem 1rem 1rem;
+    background: linear-gradient(to bottom, #e8dfc0, var(--parchment));
+    border-bottom: 2px solid var(--gold);
+    position: relative;
+  }
+
+  header::before, header::after {
+    content: '✦';
+    color: var(--gold);
+    font-size: 1.2rem;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  header::before { left: 2rem; }
+  header::after { right: 2rem; }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.5rem, 4vw, 2.8rem);
+    color: var(--sea);
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+  }
+
+  .subtitle {
+    font-style: italic;
+    color: var(--rust);
+    font-size: 1.1rem;
+    margin-top: 0.3rem;
+  }
+
+  #stats {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    padding: 0.6rem;
+    background: var(--sea);
+    color: var(--cream);
+    font-size: 0.9rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  #stats span { font-weight: 300; }
+  #stats strong { color: var(--gold); }
+
+  #map-container {
+    position: relative;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  #map-svg {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 4px 20px rgba(0,0,0,0.15));
+    border: 2px solid var(--gold);
+    border-radius: 4px;
+    background: #d4e8f0;
+  }
+
+  .land { fill: #c8c89a; stroke: #a09060; stroke-width: 0.3; }
+  .water { fill: #b8d4e8; }
+
+  .pin {
+    cursor: pointer;
+  }
+
+  .pin .hit-area {
+    fill: transparent;
+    stroke: none;
+  }
+
+  .pin .dot {
+    fill: var(--rust);
+    stroke: var(--gold);
+    stroke-width: 1.2;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4));
+    transition: r 0.15s;
+  }
+
+  .pin:hover .dot { r: 6; }
+
+  .pin.africa .dot { fill: #8b3a1a; }
+  .pin.asia .dot { fill: #3d5c2a; }
+  .pin.europe .dot { fill: #2a4a6b; }
+  .pin.americas .dot { fill: #6b2a7a; }
+  .pin.oceania .dot { fill: #c8943a; }
+
+  #tooltip {
+    position: fixed;
+    background: var(--ink);
+    color: var(--cream);
+    padding: 0.8rem 1.2rem;
+    border-radius: 4px;
+    font-size: 1rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 1000;
+    border-left: 3px solid var(--gold);
+    max-width: 280px;
+    min-width: 160px;
+    line-height: 1.5;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+
+  #tooltip.visible { opacity: 1; }
+  #tooltip .tt-place { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--gold); }
+  #tooltip .tt-country { font-weight: 300; font-size: 0.82rem; color: #ccc; margin-top: 0.1rem; }
+  #tooltip .tt-note { font-style: italic; font-size: 0.8rem; color: #aaa; margin-top: 0.2rem; }
+  #tooltip .tt-date { font-size: 0.78rem; color: #aaa; }
+
+  #legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+    padding: 0.8rem 1rem;
+    background: var(--cream);
+    border-top: 1px solid var(--gold);
+    font-size: 0.85rem;
+  }
+
+  .leg-item { display: flex; align-items: center; gap: 0.4rem; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--gold); }
+  .leg-af { background: #8b3a1a; }
+  .leg-as { background: #3d5c2a; }
+  .leg-eu { background: #2a4a6b; }
+  .leg-am { background: #6b2a7a; }
+  .leg-oc { background: #c8943a; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Grondbibliotheek</h1>
+  <p class="subtitle">Van elke plek op aarde een stukje grond</p>
+</header>
+
+<div id="stats">
+  <span>Totaal: <strong id="total-count">0</strong> locaties</span>
+  <span>Continenten: <strong>6</strong></span>
+</div>
+
+<div id="map-container">
+  <svg id="map-svg" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
+    <!-- Ocean background -->
+    <rect width="1000" height="500" fill="#c8dff0"/>
+    
+    <!-- Simplified world map paths -->
+    <!-- Europe -->
+    <path class="land" d="M480,100 L490,95 L505,98 L515,92 L520,97 L530,93 L540,98 L545,105 L555,108 L558,115 L550,118 L545,125 L535,128 L525,132 L520,140 L510,138 L505,145 L495,142 L488,148 L480,145 L475,138 L470,132 L465,125 L468,118 L475,112 Z"/>
+    <!-- Scandinavia -->
+    <path class="land" d="M490,65 L498,60 L505,63 L510,72 L515,78 L512,85 L505,88 L498,85 L492,78 L488,72 Z"/>
+    <path class="land" d="M505,63 L515,55 L522,58 L528,65 L525,75 L518,80 L512,78 L508,70 Z"/>
+    <path class="land" d="M475,75 L483,70 L490,72 L492,80 L488,88 L480,90 L473,85 Z"/>
+    <!-- UK & Ireland -->
+    <path class="land" d="M455,95 L462,90 L468,93 L470,100 L465,108 L458,110 L453,105 Z"/>
+    <path class="land" d="M448,95 L453,92 L456,98 L452,105 L447,103 Z"/>
+    <!-- France/Iberia/Italy -->
+    <path class="land" d="M460,118 L475,112 L480,118 L478,128 L470,135 L460,132 L452,128 L450,120 Z"/>
+    <path class="land" d="M440,125 L452,120 L455,130 L450,140 L440,145 L430,140 L428,132 L435,128 Z"/>
+    <path class="land" d="M430,130 L440,128 L442,138 L438,148 L430,150 L425,145 L425,138 Z"/>
+    <!-- Corsica/Sardinia -->
+    <path class="land" d="M477,138 L481,135 L483,140 L480,145 L476,143 Z"/>
+    <path class="land" d="M479,148 L483,145 L485,150 L482,155 L478,153 Z"/>
+    <!-- Sicily -->
+    <path class="land" d="M487,155 L493,152 L496,156 L493,161 L487,160 Z"/>
+    <!-- Italy -->
+    <path class="land" d="M485,128 L492,125 L497,130 L498,140 L495,150 L490,155 L485,150 L482,140 L483,133 Z"/>
+    <!-- Balkans/Greece -->
+    <path class="land" d="M510,128 L520,125 L528,128 L530,138 L525,145 L515,148 L508,143 L507,135 Z"/>
+    <path class="land" d="M515,148 L520,145 L523,150 L520,158 L515,156 Z"/>
+    <!-- Eastern Europe -->
+    <path class="land" d="M525,105 L540,100 L555,103 L565,108 L562,118 L550,122 L538,120 L528,115 Z"/>
+    <path class="land" d="M540,118 L555,115 L565,120 L568,130 L558,135 L545,130 Z"/>
+
+    <!-- Africa -->
+    <path class="land" d="M480,180 L495,175 L520,172 L540,175 L555,183 L568,195 L572,215 L568,240 L555,268 L540,290 L525,308 L510,318 L495,315 L480,305 L468,288 L460,268 L458,245 L462,222 L468,205 L475,192 Z"/>
+    <!-- Madagascar -->
+    <path class="land" d="M567,260 L573,255 L578,265 L575,278 L568,280 L563,272 Z"/>
+    <!-- North Africa detail -->
+    <path class="land" d="M480,178 L495,173 L515,170 L530,172 L545,175 L555,180 L558,190 L545,195 L525,192 L505,190 L488,188 Z"/>
+
+    <!-- Middle East -->
+    <path class="land" d="M565,155 L580,150 L595,152 L605,160 L608,172 L600,180 L585,183 L570,178 L563,168 Z"/>
+    <path class="land" d="M580,170 L595,168 L600,175 L598,185 L590,188 L580,185 Z"/>
+    <!-- Arabian Peninsula -->
+    <path class="land" d="M585,180 L610,175 L625,180 L630,195 L628,215 L620,228 L605,232 L592,225 L585,212 L583,198 Z"/>
+
+    <!-- India -->
+    <path class="land" d="M630,165 L650,158 L668,162 L678,175 L680,192 L675,210 L665,225 L650,235 L635,232 L625,218 L622,200 L625,183 Z"/>
+    <!-- Sri Lanka -->
+    <path class="land" d="M660,240 L665,237 L668,242 L665,248 L660,247 Z"/>
+
+    <!-- Southeast Asia -->
+    <path class="land" d="M710,185 L730,178 L748,180 L758,190 L755,205 L742,213 L725,210 L712,200 Z"/>
+    <!-- Vietnam/Thailand -->
+    <path class="land" d="M720,195 L730,192 L738,198 L740,212 L735,225 L725,230 L718,222 L715,210 Z"/>
+    <!-- Indochina -->
+    <path class="land" d="M700,180 L720,175 L730,180 L732,192 L725,200 L712,198 L702,190 Z"/>
+
+    <!-- China -->
+    <path class="land" d="M660,130 L700,120 L740,122 L768,130 L778,145 L775,165 L760,178 L738,182 L715,178 L692,170 L670,160 L655,148 Z"/>
+
+    <!-- Japan -->
+    <path class="land" d="M778,148 L785,143 L790,148 L788,158 L782,162 L777,158 Z"/>
+    <path class="land" d="M783,140 L790,135 L796,140 L793,150 L787,152 L782,148 Z"/>
+
+    <!-- Russia -->
+    <path class="land" d="M540,60 L600,45 L680,40 L760,45 L820,55 L860,65 L870,80 L855,92 L820,95 L780,90 L740,85 L700,82 L660,78 L620,75 L580,72 L550,70 Z"/>
+    <path class="land" d="M820,55 L870,50 L910,55 L940,65 L938,80 L920,88 L895,85 L870,82 L848,75 L832,65 Z"/>
+
+    <!-- Central Asia -->
+    <path class="land" d="M580,105 L625,98 L665,100 L685,110 L682,125 L665,130 L640,128 L615,120 L590,115 Z"/>
+
+    <!-- North America -->
+    <path class="land" d="M120,80 L170,72 L215,75 L248,85 L265,100 L270,120 L265,140 L255,158 L240,170 L220,178 L195,180 L170,178 L148,170 L130,158 L118,140 L112,120 L113,100 Z"/>
+    <!-- Florida -->
+    <path class="land" d="M215,170 L222,168 L228,175 L225,188 L218,190 L212,183 Z"/>
+    <!-- Alaska -->
+    <path class="land" d="M68,75 L90,68 L110,72 L118,82 L112,92 L95,95 L75,90 Z"/>
+    <!-- Greenland -->
+    <path class="land" d="M340,45 L370,38 L395,42 L405,55 L400,70 L385,78 L362,75 L342,65 Z"/>
+    <!-- Canada extension -->
+    <path class="land" d="M120,78 L155,70 L190,68 L225,72 L255,80 L270,90 L265,100 L248,85 L215,75 L170,72 Z"/>
+
+    <!-- Mexico/Central America -->
+    <path class="land" d="M160,178 L185,175 L205,180 L215,190 L210,205 L198,215 L182,218 L168,210 L158,198 Z"/>
+    <!-- Caribbean -->
+    <path class="land" d="M230,195 L238,192 L243,197 L240,203 L233,204 Z"/>
+    <path class="land" d="M248,197 L255,194 L258,199 L255,205 L249,204 Z"/>
+    <path class="land" d="M262,192 L272,188 L278,193 L275,200 L265,202 Z"/>
+    <!-- Curaçao -->
+    <path class="land" d="M242,210 L248,208 L250,212 L247,216 L242,215 Z"/>
+    <!-- Panama -->
+    <path class="land" d="M196,218 L208,216 L215,222 L213,230 L203,232 L195,226 Z"/>
+
+    <!-- South America -->
+    <path class="land" d="M230,228 L260,220 L285,222 L305,230 L318,248 L322,270 L318,298 L308,325 L292,348 L272,362 L252,368 L235,362 L220,345 L210,322 L208,295 L212,268 L220,248 Z"/>
+    <!-- Brazil bulge -->
+    <path class="land" d="M285,235 L318,238 L342,248 L352,265 L345,282 L325,288 L305,282 L288,265 L280,248 Z"/>
+
+    <!-- Australia -->
+    <path class="land" d="M745,315 L785,305 L820,308 L848,320 L862,340 L860,365 L845,385 L820,395 L790,398 L762,390 L742,372 L732,350 L733,330 Z"/>
+    <!-- New Zealand -->
+    <path class="land" d="M878,375 L885,368 L892,372 L895,385 L888,392 L880,388 Z"/>
+    <path class="land" d="M872,390 L880,385 L885,392 L882,402 L874,402 Z"/>
+
+    <!-- Cyprus -->
+    <path class="land" d="M553,152 L560,149 L567,152 L566,158 L558,160 L552,157 Z"/>
+    <!-- Malta -->
+    <path class="land" d="M490,163 L494,161 L497,164 L495,167 L490,166 Z"/>
+
+    <!-- Canary Islands -->
+    <path class="land" d="M435,185 L440,183 L443,186 L441,190 L436,189 Z"/>
+    <!-- Cape Verde -->
+    <path class="land" d="M418,195 L423,193 L425,197 L422,201 L418,200 Z"/>
+
+    <!-- Seychelles -->
+    <path class="land" d="M598,245 L602,243 L604,247 L602,250 L598,249 Z"/>
+
+    <!-- Iceland -->
+    <path class="land" d="M408,68 L422,63 L435,65 L440,73 L435,80 L420,82 L408,77 Z"/>
+
+    <!-- Pins will be inserted here by JS -->
+    <g id="pins-layer"></g>
+  </svg>
+</div>
+
+<div id="legend">
+  <div class="leg-item"><div class="leg-dot leg-af"></div> Afrika</div>
+  <div class="leg-item"><div class="leg-dot leg-as"></div> Azië &amp; Midden-Oosten</div>
+  <div class="leg-item"><div class="leg-dot leg-eu"></div> Europa</div>
+  <div class="leg-item"><div class="leg-dot leg-am"></div> Amerika &amp; Caraïben</div>
+  <div class="leg-item"><div class="leg-dot leg-oc"></div> Oceanië</div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// Location data: [id, country, place, date, note, continent, lat, lon]
+const locations = [
+  // AFRICA
+  ["1","Benin","Benin","2017","","africa",9.3,2.3],
+  ["2","Burkina Faso","Ouagadougou","","","africa",12.37,-1.53],
+  ["3","Canarische Eilanden","Gran Canaria - La Culata","","Roque Nuglo 1813m","africa",27.97,-15.60],
+  ["4","Canarische Eilanden","Gran Canaria - Al Hambra","","","africa",27.95,-15.55],
+  ["5","Canarische Eilanden","Canarische Eilanden","","","africa",28.1,-15.4],
+  ["6","Congo","Katako-Kindu","08/2019","","africa",-2.43,26.18],
+  ["7","Congo","Wamba Prison","","","africa",2.15,27.99],
+  ["8","Congo","Zuid-Kivu","08/2018","","africa",-2.5,28.85],
+  ["9","Congo","Congo","","","africa",-4.32,15.32],
+  ["10","Egypte","Egypte","2017","","africa",26.82,30.80],
+  ["11","Kaapverdië","Praia","","","africa",14.93,-23.52],
+  ["11b","Kaapverdië","Cruz de Papa","12/2023","","africa",14.90,-23.50],
+  ["12a","Marokko","Nador","20/08/2024","","africa",35.17,-2.93],
+  ["12b","Marokko","Marrakesh","","","africa",31.63,-8.00],
+  ["12c","Marokko","Qarzazate","","","africa",30.92,-6.90],
+  ["12d","Marokko","Driuch","","","africa",35.13,-3.38],
+  ["13","Oeganda","Oeganda","2017","","africa",1.37,32.29],
+  ["15","Rwanda","Kigali - Masaka","2021","","africa",-1.94,30.06],
+  ["16","Rwanda","Rwanda","2024","","africa",-2.0,29.87],
+  ["17","Rwanda","Kigali - Masaka","2023","","africa",-1.97,30.08],
+  ["18","Rwanda","Kigali - Masaka","10/2017","","africa",-1.95,30.07],
+  ["19","Rwanda","Kigali - Massaka","03/2023","","africa",-1.96,30.09],
+  ["20","Seychelles","Seychelles","","","africa",-4.68,55.49],
+  ["21","Togo","Togo","2017","","africa",8.62,0.82],
+  ["23","Zuid-Afrika","Witsand","2019","","africa",-34.40,20.85],
+  ["24","Zuid-Afrika","Willowmore","","","africa",-33.28,23.49],
+  // ASIA / MIDDLE EAST
+  ["25","Birma","Myanmar","2018","","asia",16.87,96.19],
+  ["26","China","Nanning","","","asia",22.82,108.37],
+  ["27a","Cyprus","Troodos","","","asia",34.92,32.87],
+  ["27b","Cyprus","Kolossi","","","asia",34.67,32.93],
+  ["27c","Cyprus","Avgorou","","","asia",35.03,33.77],
+  ["28","India","Delhi - Mahatma Gandhi Park","","Mahatma Gandhi Park","asia",28.69,77.22],
+  ["29","India","Madhya Pradesh","","","asia",23.47,77.95],
+  ["30","India","Prayagraj","23/2024","Oever van de Ganges","asia",25.43,81.84],
+  ["31","Iran","Teheran","","","asia",35.69,51.39],
+  ["32","Israël","Jeruzalem","","","asia",31.78,35.22],
+  ["33","Jordanië","Dode Zee","","+ zout","asia",31.55,35.47],
+  ["34","Libanon","Libanon","","","asia",33.85,35.86],
+  ["35","Jordanië/Syrië","Jordanië - Syrië","","","asia",32.5,36.3],
+  ["36","Nepal","Nepal","","","asia",28.39,84.12],
+  ["37","Palestina","Palestina","2015","","asia",31.95,35.29],
+  ["38","Sri Lanka","Sri Lanka","","","asia",7.87,80.77],
+  ["39","Sri Lanka","Colombo","","","asia",6.93,79.85],
+  ["40","Thailand","Thailand","","","asia",15.87,100.99],
+  ["41","Vietnam","Vietnam","","","asia",14.06,108.28],
+  ["42","Turkije","Turkije","","","asia",38.96,35.24],
+  ["42a","Turkije","Istanbul","","","asia",41.01,28.97],
+  ["42b","Turkije","Istanbul - Taksimplein","","Taksimplein","asia",41.04,28.99],
+  ["43","Georgië","Bozjom National Park","05/08/2024","National Park","asia",41.85,43.00],
+  // EUROPE
+  ["44a","België","Oostende","13/07/2022","","europe",51.23,2.92],
+  ["44b","België","Abdij van Postel","01/05/2025","Kempen Antwerpen","europe",51.35,5.03],
+  ["45","Denemarken","Kopenhagen","","","europe",55.68,12.57],
+  ["46","Denemarken","Kopenhagen","","","europe",55.69,12.58],
+  ["47","Denemarken","Ribe","03/2023","","europe",55.33,8.76],
+  ["48","Denemarken","Lindet Skov Hönning","","","europe",55.23,9.20],
+  ["49","Duitsland","Duitsland","","","europe",51.16,10.45],
+  ["49a","Duitsland","Keulen","","","europe",50.94,6.96],
+  ["49b","Duitsland","Freiburg","","","europe",47.99,7.85],
+  ["50","Engeland","Essex - Colchester","05/2022","","europe",51.89,0.90],
+  ["51","Engeland","Londen","","","europe",51.51,-0.13],
+  ["52","Engeland","Engeland","","","europe",52.36,-1.17],
+  ["52b","Engeland","Derwent Water","4/9/2024","","europe",54.57,-3.14],
+  ["53","Finland","Kallislaki","","","europe",62.24,28.18],
+  ["54","Frankrijk","Aude - Roquetaillade","15/09/2017","Tussen de druivengaard (+schelp)","europe",43.07,2.35],
+  ["55","Frankrijk","Corsica","","","europe",42.03,9.01],
+  ["56","Frankrijk","Corsica - Priana","","","europe",42.37,8.73],
+  ["57a","Frankrijk","Colmar","","","europe",48.08,7.36],
+  ["57b","Frankrijk","Dijon","","","europe",47.32,5.04],
+  ["57c","Frankrijk","Fontenay","05/05/2019","+ schelp","europe",47.62,4.28],
+  ["58","Frankrijk","Grenoble","","","europe",45.19,5.72],
+  ["59","Frankrijk","Lyon","","","europe",45.75,4.83],
+  ["60","Frankrijk","Nice","","","europe",43.71,7.26],
+  ["61","Frankrijk","Puy de Dôme - Puy Pariou","05/09/2022","","europe",45.78,2.96],
+  ["61b","Frankrijk","Mulhouse","16/12/2024","","europe",47.75,7.34],
+  ["62","Griekenland","Thessaloniki","","","europe",40.64,22.94],
+  ["63","Griekenland","Vergina","","","europe",40.49,22.32],
+  ["64","Hongarije","Ketszthely","","","europe",46.77,17.24],
+  ["65","Ierland","Dublin - Phoenix Park","","Phoenix Park","europe",53.35,-6.33],
+  ["65a","Ierland","Rosslare","16/06/2024","","europe",52.25,-6.34],
+  ["66","IJsland","Diamond Beach","09/2023","","europe",63.84,-17.68],
+  ["67","IJsland","IJsland","","","europe",65.0,-18.0],
+  ["68","Italië","Dolomieten - Drie Zinnen","","","europe",46.62,12.30],
+  ["69","Italië","Drie Zinnen 2450m","09/09/2021","","europe",46.64,12.33],
+  ["70","Italië","Etna - Strada Mareneve","09/2011","Piano Provenzana","europe",37.75,15.00],
+  ["71","Italië","Granada","05/09/2022","","europe",37.18,-3.60],
+  ["72","Italië","Il Poggio di San Remo","","","europe",43.82,7.77],
+  ["73","Italië","Rome","","","europe",41.90,12.50],
+  ["74","Italië","Stelvio","","","europe",46.53,10.45],
+  ["75","Italië","Trapani - Parrinello","","Baglio Donna Franca","europe",37.98,12.55],
+  ["76","Italië","Venetië","","","europe",45.44,12.33],
+  ["77","Italië","Vesuvius-vulkaan","09/2018","","europe",40.82,14.43],
+  ["78","Italië","Zuid-Tirol - Toblach","08/09/2021","","europe",46.73,12.22],
+  ["78b","Italië","Gardameer","","","europe",45.65,10.65],
+  ["78c","Italië","Assisi - Domus Pacis","01/09/2025","","europe",43.07,12.62],
+  ["79","Kroatië","Kroatië","","","europe",45.10,16.44],
+  ["79a","Kroatië","Dubrovnik","","","europe",42.65,18.09],
+  ["79b","Kroatië","Varaždin","","","europe",46.31,16.34],
+  ["79c","Kroatië","Dalmatia","","","europe",43.51,16.45],
+  ["79d","Kroatië","Poréc","05/08/2024","","europe",45.23,13.60],
+  ["80a","Malta","Marfa","","","europe",35.99,14.35],
+  ["80b","Malta","Gózo - Xaghra Tempels","","","europe",36.05,14.27],
+  ["80c","Malta","Mosta Basiliek","","","europe",35.91,14.43],
+  ["80d","Malta","Marsaxlokk","","","europe",35.84,14.54],
+  ["80e","Malta","Comino Island","","","europe",36.01,14.34],
+  ["81","Monaco","Monaco","","","europe",43.74,7.43],
+  ["82","Nederland","Rotterdam","2019","","europe",51.92,4.48],
+  ["83","Noorwegen","Gardnos","","","europe",60.60,9.12],
+  ["84","Noorwegen","Ifnefoss","","","europe",60.12,9.05],
+  ["85","Noorwegen","Lillehammer","","","europe",61.12,10.47],
+  ["86","Noorwegen","Norefjell","","","europe",60.40,9.48],
+  ["87","Noorwegen","Oslo","","","europe",59.91,10.75],
+  ["88","Noorwegen","Steindalfoss","23/07/2019","","europe",69.19,19.97],
+  ["89","Oostenrijk","Wenen","","","europe",48.21,16.37],
+  ["90","Oostenrijk","Oostenrijk","","","europe",47.52,14.55],
+  ["91","Polen","Krakau","","","europe",50.06,19.94],
+  ["92","Polen","Yerzmanki","","","europe",50.75,20.00],
+  ["93","Polen","Zgorzelec","","","europe",51.15,15.01],
+  ["94","Portugal","Madeira","","","europe",32.76,-16.96],
+  ["95","Portugal","Santiago do Cacèm","09/09/2016","","europe",38.02,-8.69],
+  ["96","Portugal","Portugal","","","europe",39.56,-8.00],
+  ["97","Portugal","Solajo Espigueiros","","","europe",41.72,-8.48],
+  ["97b","Portugal","Braga","","","europe",41.55,-8.43],
+  ["97c","Portugal","Ponte de Lima","","","europe",41.77,-8.58],
+  ["98","Roemenië","Boekarest","","","europe",44.43,26.10],
+  ["99","Rusland","Sint-Petersburg","","","europe",59.95,30.32],
+  ["100","Schotland","Ben Nevis","","","europe",56.79,-5.00],
+  ["101","Schotland","Isle of Skye - Old Man of Storr","01/09/2022","","europe",57.50,-6.18],
+  ["102","Schotland","Loch Ness","","","europe",57.32,-4.43],
+  ["103","Schotland","Lockerbie","","","europe",55.12,-3.36],
+  ["104","Schotland","Port Achan","","","europe",56.30,-5.23],
+  ["105","Schotland","Tighnabruaich","","","europe",55.93,-5.23],
+  ["106","Spanje","Barcelona","","","europe",41.39,2.15],
+  ["107","Spanje","Gerona","09/09/2022","","europe",41.98,2.82],
+  ["108","Spanje","Granada","05/09/2022","","europe",37.18,-3.60],
+  ["109","Spanje","Granada","","","europe",37.17,-3.59],
+  ["110","Spanje","Valga - Eucalyptus Bos","","Eucalyptus Bos","europe",42.63,-8.41],
+  ["111","Spanje","Zaragoza","03/2019","","europe",41.65,-0.88],
+  ["112","Spanje","Zaragoza - Hijar","03/2019","","europe",41.18,-0.44],
+  ["113","Spanje","Zaragoza - Hijar","06/2022","","europe",41.17,-0.43],
+  ["114","Spanje","Spanje","","zand","europe",40.0,-3.0],
+  ["114b","Spanje","La Rioja - Santo Domingo de la Calzada","","","europe",42.44,-2.95],
+  ["115","Tsjechië","Praag","","","europe",50.08,14.44],
+  ["116","Tsjechië","Karlsbad","","","europe",50.23,12.87],
+  ["117","Wales","Brechfa Forest","","","europe",51.90,-4.13],
+  ["118","Wales","Brecon Beacons","","","europe",51.87,-3.44],
+  ["119","Zweden","Veberod","","","europe",55.63,13.47],
+  // AMERICAS
+  ["120","Alabama","Bayou la Batre","","","americas",30.40,-88.25],
+  ["121","Alabama","Robertsdale","","","americas",30.55,-87.71],
+  ["122","Arkansas","Lockesburg","","","americas",33.97,-94.17],
+  ["123","Arkansas","Texarkana","","","americas",33.43,-94.04],
+  ["124a","Canada","Montréal - Parc des Rapides","","","americas",45.42,-73.61],
+  ["124b","Canada","Montréal - Jardin des Premières","","","americas",45.44,-73.59],
+  ["125","Canada","Niagara Falls","","","americas",43.09,-79.08],
+  ["126","Caraïben","Cayman Eilanden","","","americas",19.31,-81.25],
+  ["127","Cuba","Isla Maparta","","","americas",22.95,-81.80],
+  ["128","Cuba","El Castillito - Suikerveld","","Suikerveld","americas",22.43,-80.00],
+  ["128b","Cuba","Varadero","","","americas",23.15,-81.25],
+  ["129","Curaçao","Kòrsou - Westpunt","","","americas",12.38,-69.15],
+  ["130a","Dominicaanse Republiek","Bávaro","","","americas",18.73,-68.49],
+  ["130b","Dominicaanse Republiek","Anamuya Mountain","","","americas",18.83,-68.55],
+  ["130c","Dominicaanse Republiek","Rio Anamuya","","","americas",18.80,-68.53],
+  ["132","Florida","Lee","","","americas",26.77,-81.68],
+  ["133","Georgia","Alto","","","americas",34.45,-83.57],
+  ["134","Jamaica","Montego Bay","","","americas",18.47,-77.92],
+  ["135","Klein Curaçao","Klein Curaçao","","","americas",11.98,-68.65],
+  ["136","Louisiana","Alto","","","americas",32.36,-92.11],
+  ["137","Louisiana","Ferryday","","","americas",31.63,-91.55],
+  ["138","Louisiana","Gilliam","","","americas",32.81,-93.85],
+  ["139","Mississippi","Biloxi","","","americas",30.40,-88.89],
+  ["140","Mississippi","Kokomo","","","americas",31.04,-89.93],
+  ["140a","Mississippi","Natchez Soil","","","americas",31.56,-91.40],
+  ["141","Mexico","Yucatán Akumal","10/2024","","americas",20.39,-87.32],
+  ["142","New Mexico","Albuquerque","","","americas",35.08,-106.65],
+  ["143","New Mexico","Bloomfield","","","americas",36.71,-107.99],
+  ["144","New Mexico","Santa Fe","","","americas",35.69,-105.94],
+  ["145","New York","New York City - Central Park","","Central Park","americas",40.79,-73.96],
+  ["146","North Carolina","Smoky Mountains","","","americas",35.68,-83.53],
+  ["147","North Carolina","Waynesville","","","americas",35.49,-82.99],
+  ["148","North Carolina","North Carolina","","","americas",35.52,-79.83],
+  ["149","Oklahoma","Elk City","","","americas",35.41,-99.40],
+  ["150","Oklahoma","Hodgen","","","americas",34.93,-94.73],
+  ["151","Oklahoma","Oklahoma City","","","americas",35.47,-97.52],
+  ["152a","Panama","Panama City","","","americas",8.99,-79.52],
+  ["152b","Panama","San José","","","americas",9.93,-84.08],
+  ["153","South Carolina","Charleston","","","americas",32.78,-79.94],
+  ["154","South Carolina","Prosperity","","","americas",34.21,-81.53],
+  ["155","South Carolina","Holly Hill","","","americas",33.33,-80.42],
+  ["156","Tennessee","Gatlinburg","","","americas",35.71,-83.51],
+  ["157","Texas","Kellerville","","","americas",35.52,-100.47],
+  ["158","Texas","Wildorado","","","americas",35.18,-102.17],
+  ["159","Brazilië","Brazilië","","","americas",-14.24,-51.93],
+  ["160a","Peru","Cusco - Ollantaytambo","","","americas",-13.26,-72.27],
+  ["160b","Peru","Arequipa - Chivay","","","americas",-15.64,-71.61],
+];
+
+// Convert lat/lon to SVG coordinates (Mercator-ish projection for this map)
+function project(lat, lon) {
+  // Map: viewBox 0 0 1000 500
+  // Longitude: -180 to 180 -> 0 to 1000
+  // Latitude: 85 to -60 (flipped) -> 0 to 500
+  const x = (lon + 180) / 360 * 1000;
+  const latRad = lat * Math.PI / 180;
+  const mercN = Math.log(Math.tan((Math.PI / 4) + (latRad / 2)));
+  const y = (500 / 2) - (500 * mercN / (2 * Math.PI * 1.3));
+  return [x, y];
+}
+
+const pinsLayer = document.getElementById('pins-layer');
+const tooltip = document.getElementById('tooltip');
+let totalCount = 0;
+
+locations.forEach(loc => {
+  const [id, country, place, date, note, continent, lat, lon] = loc;
+  const [x, y] = project(lat, lon);
+  totalCount++;
+
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('class', `pin ${continent}`);
+  g.setAttribute('transform', `translate(${x},${y})`);
+  g.style.cursor = 'pointer';
+
+  // Invisible large hit area for easy hovering
+  const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  hitArea.setAttribute('r', '10');
+  hitArea.setAttribute('cx', '0');
+  hitArea.setAttribute('cy', '0');
+  hitArea.setAttribute('class', 'hit-area');
+  g.appendChild(hitArea);
+
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('r', '3.5');
+  circle.setAttribute('cx', '0');
+  circle.setAttribute('cy', '0');
+  circle.setAttribute('class', 'dot');
+  g.appendChild(circle);
+
+  function showTooltip(clientX, clientY) {
+    let html = `<div class="tt-place">${place}</div>`;
+    html += `<div class="tt-country">${country}</div>`;
+    if (date) html += `<div class="tt-date"> ${date}</div>`;
+    if (note) html += `<div class="tt-note">✦ ${note}</div>`;
+    tooltip.innerHTML = html;
+    tooltip.classList.add('visible');
+    positionTooltip(clientX, clientY);
+  }
+
+  function positionTooltip(clientX, clientY) {
+    const margin = 16;
+    const ttW = 270, ttH = 110;
+    let tx = clientX + margin;
+    let ty = clientY + margin;
+    if (tx + ttW > window.innerWidth) tx = clientX - ttW - margin;
+    if (ty + ttH > window.innerHeight) ty = clientY - ttH - margin;
+    if (tx < 8) tx = 8;
+    if (ty < 8) ty = 8;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top = ty + 'px';
+  }
+
+  // Mouse events (desktop)
+  g.addEventListener('mouseenter', (e) => showTooltip(e.clientX, e.clientY));
+  g.addEventListener('mousemove', (e) => positionTooltip(e.clientX, e.clientY));
+  g.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+
+  // Touch events (iPhone / iPad)
+  g.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const t = e.touches[0];
+    showTooltip(t.clientX, t.clientY);
+  }, { passive: false });
+
+  pinsLayer.appendChild(g);
+});
+
+document.getElementById('total-count').textContent = totalCount;
+
+// Tap anywhere else on mobile to close tooltip
+document.addEventListener('touchstart', (e) => {
+  if (!e.target.closest('#pins-layer')) {
+    tooltip.classList.remove('visible');
+  }
+});
+</script>
+</body>
+</html>
